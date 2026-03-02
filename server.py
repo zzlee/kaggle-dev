@@ -41,30 +41,39 @@ async def get_sherds(
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = "SELECT * FROM sherd_info WHERE 1=1"
+    query = """
+        SELECT 
+            s.image_id, s.sherd_id, s.image_side, s.image_id_original,
+            u.name as unit, p.name as part, t.name as type
+        FROM sherd_info s
+        LEFT JOIN units u ON s.unit_id = u.unit_id
+        LEFT JOIN parts p ON s.part_id = p.part_id
+        LEFT JOIN types t ON s.type_id = t.type_id
+        WHERE 1=1
+    """
     params = []
     
     if search:
-        query += " AND (sherd_id LIKE ? OR image_id LIKE ?)"
+        query += " AND (s.sherd_id LIKE ? OR s.image_id LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
     
     if sherd_id:
-        query += " AND sherd_id LIKE ?"
+        query += " AND s.sherd_id LIKE ?"
         params.append(f"%{sherd_id}%")
     if unit:
-        query += " AND unit LIKE ?"
-        params.append(f"%{unit}%")
+        query += " AND u.name = ?"
+        params.append(unit)
     if part:
-        query += " AND part LIKE ?"
-        params.append(f"%{part}%")
+        query += " AND p.name = ?"
+        params.append(part)
     if type:
-        query += " AND type LIKE ?"
-        params.append(f"%{type}%")
+        query += " AND t.name = ?"
+        params.append(type)
     if image_side:
-        query += " AND image_side = ?"
+        query += " AND s.image_side = ?"
         params.append(image_side)
     
-    # Get total count for pagination
+    # Get total count
     count_query = f"SELECT COUNT(*) FROM ({query})"
     cursor.execute(count_query, params)
     total_count = cursor.fetchone()[0]
@@ -77,7 +86,6 @@ async def get_sherds(
     rows = cursor.fetchall()
     
     results = [dict(row) for row in rows]
-    
     conn.close()
     
     return {
@@ -94,9 +102,18 @@ async def get_metadata():
     cursor = conn.cursor()
     
     metadata = {}
-    for field in ["unit", "part", "type", "image_side"]:
-        cursor.execute(f"SELECT DISTINCT {field} FROM sherd_info WHERE {field} IS NOT NULL ORDER BY {field}")
-        metadata[field] = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT name FROM units WHERE name IS NOT NULL ORDER BY name")
+    metadata['unit'] = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT name FROM parts WHERE name IS NOT NULL ORDER BY name")
+    metadata['part'] = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT name FROM types WHERE name IS NOT NULL ORDER BY name")
+    metadata['type'] = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT image_side FROM sherd_info WHERE image_side IS NOT NULL ORDER BY image_side")
+    metadata['image_side'] = [row[0] for row in cursor.fetchall()]
     
     conn.close()
     return metadata
