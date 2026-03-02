@@ -196,6 +196,19 @@
             align-items: center;
             gap: 15px;
             max-width: 95vw;
+            max-height: 95vh;
+        }
+
+        .preview-scroll-container {
+            width: 100%;
+            height: 70vh;
+            overflow: auto;
+            background: #0f172a;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
         }
 
         .canvas-wrapper {
@@ -203,12 +216,13 @@
             line-height: 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             border-radius: 4px;
-            overflow: hidden;
+            transform-origin: 0 0;
+            transition: transform 0.1s ease-out;
         }
 
         .modal-content {
-            max-width: 85vw;
-            max-height: 70vh;
+            max-width: none;
+            max-height: none;
             display: block;
         }
 
@@ -391,10 +405,18 @@
     <div id="imageModal" class="modal">
         <div class="modal-container">
             <span class="close-modal" onclick="closeModal()">&times;</span>
-            <div class="canvas-wrapper">
-                <img class="modal-content" id="modalImage">
-                <canvas id="bboxCanvas"></canvas>
-                <img id="maskImage">
+            <div class="modal-controls">
+                <button class="btn-secondary" onclick="updateZoom(0.2)">Zoom +</button>
+                <button class="btn-secondary" onclick="updateZoom(-0.2)">Zoom -</button>
+                <button class="btn-secondary" onclick="resetZoom()">Reset Zoom</button>
+                <span id="zoomLabel" style="color: white; font-family: monospace;">100%</span>
+            </div>
+            <div class="preview-scroll-container">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <img class="modal-content" id="modalImage">
+                    <canvas id="bboxCanvas"></canvas>
+                    <img id="maskImage">
+                </div>
             </div>
             <div class="modal-controls">
                 <button id="segmentBtn" class="btn-primary" onclick="runSegmentation()" disabled>Run Segmentation</button>
@@ -413,6 +435,7 @@
         let isDrawing = false;
         let startX, startY;
         let currentBbox = null;
+        let zoomLevel = 1.0;
 
         function toggleSearch() {
             const panel = document.getElementById('searchPanel');
@@ -432,8 +455,16 @@
             document.getElementById('segmentBtn').disabled = true;
             
             modalImg.onload = () => {
-                canvas.width = modalImg.clientWidth;
-                canvas.height = modalImg.clientHeight;
+                // Determine a good initial scale for the "fit-in-window" look
+                const container = document.querySelector('.preview-scroll-container');
+                const scaleX = (container.clientWidth - 40) / modalImg.naturalWidth;
+                const scaleY = (container.clientHeight - 40) / modalImg.naturalHeight;
+                const initialScale = Math.min(scaleX, scaleY, 1.0);
+                
+                canvas.width = modalImg.naturalWidth;
+                canvas.height = modalImg.naturalHeight;
+                zoomLevel = initialScale;
+                applyZoom();
                 resetCanvas();
             };
         }
@@ -442,46 +473,70 @@
             document.getElementById('imageModal').style.display = "none";
         }
 
+        function updateZoom(delta) {
+            zoomLevel = Math.max(0.1, Math.min(5.0, zoomLevel + delta));
+            applyZoom();
+        }
+
+        function resetZoom() {
+            zoomLevel = 1.0;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const wrapper = document.getElementById('canvasWrapper');
+            const zoomLabel = document.getElementById('zoomLabel');
+            wrapper.style.transform = `scale(${zoomLevel})`;
+            zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+        }
+
         // Canvas drawing logic
         const canvas = document.getElementById('bboxCanvas');
         const ctx = canvas.getContext('2d');
 
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Since the canvas is scaled by CSS transform, 
+            // the rect size is the scaled size.
+            // Dividing by zoomLevel gives the coordinates on the original unscaled canvas.
+            return {
+                x: (e.clientX - rect.left) / zoomLevel,
+                y: (e.clientY - rect.top) / zoomLevel
+            };
+        }
+
         canvas.addEventListener('mousedown', e => {
             isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
+            const pos = getMousePos(e);
+            startX = pos.x;
+            startY = pos.y;
             document.getElementById('maskImage').style.display = "none";
         });
 
         canvas.addEventListener('mousemove', e => {
             if (!isDrawing) return;
-            const rect = canvas.getBoundingClientRect();
-            const currX = e.clientX - rect.left;
-            const currY = e.clientY - rect.top;
+            const pos = getMousePos(e);
+            const currX = pos.x;
+            const currY = pos.y;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = '#2563eb';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 / zoomLevel; // Keep line width consistent visually
             ctx.strokeRect(startX, startY, currX - startX, currY - startY);
         });
 
         canvas.addEventListener('mouseup', e => {
             if (!isDrawing) return;
             isDrawing = false;
-            const rect = canvas.getBoundingClientRect();
-            const endX = e.clientX - rect.left;
-            const endY = e.clientY - rect.top;
+            const pos = getMousePos(e);
+            const endX = pos.x;
+            const endY = pos.y;
             
-            // Store bbox in normalized coordinates or original image coordinates
-            const modalImg = document.getElementById('modalImage');
-            const scaleX = modalImg.naturalWidth / modalImg.clientWidth;
-            const scaleY = modalImg.naturalHeight / modalImg.clientHeight;
-
-            const x1 = Math.min(startX, endX) * scaleX;
-            const y1 = Math.min(startY, endY) * scaleY;
-            const x2 = Math.max(startX, endX) * scaleX;
-            const y2 = Math.max(startY, endY) * scaleY;
+            // coordinates are already on the unscaled canvas (naturalWidth/Height)
+            const x1 = Math.min(startX, endX);
+            const y1 = Math.min(startY, endY);
+            const x2 = Math.max(startX, endX);
+            const y2 = Math.max(startY, endY);
             
             currentBbox = [x1, y1, x2, y2];
             document.getElementById('segmentBtn').disabled = false;
