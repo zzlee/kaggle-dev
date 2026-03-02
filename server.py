@@ -6,11 +6,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import os
+import cv2
+import numpy as np
+import base64
+from io import BytesIO
+from PIL import Image
+from ultralytics import SAM
 
 app = FastAPI()
 
 # Database helper
 DB_PATH = "sherds.db"
+
+# Load the SAM model
+MODEL_PATH = "mobile_sam.pt"
+sam_model = SAM(MODEL_PATH)
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -23,9 +33,52 @@ if os.path.exists("h690/sherd_images"):
 
 templates = Jinja2Templates(directory="templates")
 
+class SegmentRequest(BaseModel):
+    image_id: str
+    bbox: List[float]  # [x1, y1, x2, y2]
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/api/segment")
+async def segment_image(req: SegmentRequest):
+    img_path = os.path.join("h690/sherd_images", f"{req.image_id}.jpg")
+    if not os.path.exists(img_path):
+        return {"error": "Image not found"}
+    
+    img = cv2.imread(img_path)
+    if img is None:
+        return {"error": "Failed to load image"}
+    
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # Run SAM
+    # SAM expects bboxes as a list of lists: [[x1, y1, x2, y2]]
+    results = sam_model(img_rgb, bboxes=[req.bbox], verbose=False)
+    
+    if not results or results[0].masks is None:
+        return {"error": "No mask found"}
+    
+    # Get the first mask
+    mask = results[0].masks.data[0].cpu().numpy()
+    
+    # Create a transparent overlay
+    h, w = mask.shape
+    overlay = np.zeros((h, w, 4), dtype=np.uint8)
+    
+    # Green mask with some transparency
+    overlay[mask > 0.5] = [0, 255, 0, 128] 
+    
+    # Convert to PIL Image
+    mask_img = Image.fromarray(overlay, 'RGBA')
+    
+    # Save to buffer
+    buffered = BytesIO()
+    mask_img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return {"mask": f"data:image/png;base64,{img_str}"}
 
 @app.get("/api/sherds")
 async def get_sherds(

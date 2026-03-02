@@ -183,21 +183,90 @@
             backdrop-filter: blur(4px);
             justify-content: center;
             align-items: center;
+            overflow-y: auto;
+        }
+
+        .modal-container {
+            position: relative;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            max-width: 95vw;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            line-height: 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            overflow: hidden;
         }
 
         .modal-content {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 85vw;
+            max-height: 70vh;
+            display: block;
+        }
+
+        #bboxCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        #maskImage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        .modal-controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background-color: #475569;
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-primary:disabled {
+            background-color: #64748b;
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .close-modal {
             position: absolute;
-            top: 20px;
-            right: 30px;
+            top: -40px;
+            right: 0;
             color: white;
-            font-size: 40px;
+            font-size: 30px;
             font-weight: bold;
             cursor: pointer;
         }
@@ -319,29 +388,144 @@
     </div>
 
     <!-- Image Enlarge Modal -->
-    <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="close-modal">&times;</span>
-        <img class="modal-content" id="modalImage">
+    <div id="imageModal" class="modal">
+        <div class="modal-container">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div class="canvas-wrapper">
+                <img class="modal-content" id="modalImage">
+                <canvas id="bboxCanvas"></canvas>
+                <img id="maskImage">
+            </div>
+            <div class="modal-controls">
+                <button id="segmentBtn" class="btn-primary" onclick="runSegmentation()" disabled>Run Segmentation</button>
+                <button class="btn-secondary" onclick="resetCanvas()">Clear Box</button>
+                <button class="btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let currentPage = 1;
         const pageSize = 20;
+        
+        // Segmentation UI state
+        let currentImageId = null;
+        let isDrawing = false;
+        let startX, startY;
+        let currentBbox = null;
 
         function toggleSearch() {
             const panel = document.getElementById('searchPanel');
             panel.classList.toggle('active');
         }
 
-        function openModal(src) {
+        function openModal(src, imageId) {
+            currentImageId = imageId;
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
+            const canvas = document.getElementById('bboxCanvas');
+            const maskImg = document.getElementById('maskImage');
+            
             modal.style.display = "flex";
             modalImg.src = src;
+            maskImg.style.display = "none";
+            document.getElementById('segmentBtn').disabled = true;
+            
+            modalImg.onload = () => {
+                canvas.width = modalImg.clientWidth;
+                canvas.height = modalImg.clientHeight;
+                resetCanvas();
+            };
         }
 
         function closeModal() {
             document.getElementById('imageModal').style.display = "none";
+        }
+
+        // Canvas drawing logic
+        const canvas = document.getElementById('bboxCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.addEventListener('mousedown', e => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+            document.getElementById('maskImage').style.display = "none";
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const currX = e.clientX - rect.left;
+            const currY = e.clientY - rect.top;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(startX, startY, currX - startX, currY - startY);
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+            
+            // Store bbox in normalized coordinates or original image coordinates
+            const modalImg = document.getElementById('modalImage');
+            const scaleX = modalImg.naturalWidth / modalImg.clientWidth;
+            const scaleY = modalImg.naturalHeight / modalImg.clientHeight;
+
+            const x1 = Math.min(startX, endX) * scaleX;
+            const y1 = Math.min(startY, endY) * scaleY;
+            const x2 = Math.max(startX, endX) * scaleX;
+            const y2 = Math.max(startY, endY) * scaleY;
+            
+            currentBbox = [x1, y1, x2, y2];
+            document.getElementById('segmentBtn').disabled = false;
+        });
+
+        function resetCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('maskImage').style.display = "none";
+            document.getElementById('segmentBtn').disabled = true;
+            currentBbox = null;
+        }
+
+        async function runSegmentation() {
+            if (!currentBbox || !currentImageId) return;
+            
+            const btn = document.getElementById('segmentBtn');
+            btn.textContent = "Processing...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/segment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_id: currentImageId,
+                        bbox: currentBbox
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.mask) {
+                    const maskImg = document.getElementById('maskImage');
+                    maskImg.src = result.mask;
+                    maskImg.style.display = "block";
+                } else if (result.error) {
+                    alert("Error: " + result.error);
+                }
+            } catch (error) {
+                console.error("Segmentation failed:", error);
+                alert("Segmentation failed");
+            } finally {
+                btn.textContent = "Run Segmentation";
+                btn.disabled = false;
+            }
         }
 
         async function fetchMetadata() {
@@ -413,7 +597,7 @@
                 // Render Desktop Row
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><img class="image-preview" src="${imgPath}" onclick="openModal('${imgPath}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd"></td>
+                    <td><img class="image-preview" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd"></td>
                     <td>${item.image_id}</td>
                     <td>${item.sherd_id || '-'}</td>
                     <td>${item.unit || '-'}</td>
@@ -427,7 +611,7 @@
                 const card = document.createElement('div');
                 card.className = 'sherd-card';
                 card.innerHTML = `
-                    <img class="card-img" src="${imgPath}" onclick="openModal('${imgPath}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd">
+                    <img class="card-img" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd">
                     <div class="card-info">
                         <span class="card-id">${item.image_id}</span>
                         <div><strong>Part:</strong> ${item.part || '-'}</div>
