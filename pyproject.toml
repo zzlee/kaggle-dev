@@ -10,6 +10,7 @@ dependencies = [
     "jupyter>=1.1.1",
     "kaggle>=2.0.0",
     "matplotlib>=3.10.8",
+    "scikit-learn>=1.8.0",
     "ultralytics>=8.4.19",
     "uvicorn>=0.41.0",
 ]

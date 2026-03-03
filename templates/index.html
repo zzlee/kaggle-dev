@@ -5,120 +5,296 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sherd Data Explorer</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+
         :root {
-            --primary-color: #2563eb;
+            --primary-color: #0f766e;
+            --primary-hover: #115e59;
+            --accent: #ea580c;
             --bg-color: #f8fafc;
+            --bg-soft: #f1f5f9;
             --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border-color: #cbd5e1;
+            --danger-bg: #fef2f2;
+            --danger-text: #b91c1c;
+            --success: #16a34a;
+            --shadow-lg: 0 20px 40px -28px rgba(15, 23, 42, 0.45);
+            --shadow-sm: 0 8px 18px -14px rgba(15, 23, 42, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: 'Source Sans 3', sans-serif;
+            background:
+                radial-gradient(circle at 12% 6%, rgba(15, 118, 110, 0.18), transparent 34%),
+                radial-gradient(circle at 90% 92%, rgba(234, 88, 12, 0.12), transparent 36%),
+                var(--bg-color);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            min-height: 100vh;
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 1.5rem;
         }
 
         header {
-            margin-bottom: 1.5rem;
-            text-align: center;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.65rem, 2.3vw, 2.1rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .stats {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
         .search-toggle {
             display: none;
-            width: 100%;
-            margin-bottom: 1rem;
-            background-color: #64748b;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
         }
 
         .search-panel {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(4px);
+            padding: 1.1rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 1.25rem;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            align-items: end;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.9rem;
+            border: 1px solid #dbe5ee;
+        }
+
+        .search-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 0.45rem;
         }
 
         label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
             text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         input, select {
-            padding: 0.6rem;
+            padding: 0.62rem 0.7rem;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 1rem;
-            -webkit-appearance: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: white;
+            color: var(--text-main);
+        }
+
+        input:focus, select:focus,
+        button:focus-visible {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.13);
+        }
+
+        .btn-filter,
+        .btn-ghost {
+            border-radius: 10px;
+            font-weight: 700;
+            border: 1px solid transparent;
+            cursor: pointer;
+            padding: 0.62rem 0.95rem;
+            min-width: 120px;
+            font-size: 0.88rem;
+            transition: transform 0.15s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .btn-filter {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: white;
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-soft);
+        }
+
+        .error-banner {
+            display: none;
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 0.75rem 0.9rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
         }
 
         .data-table-container {
             background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid #dbe5ee;
             overflow: hidden;
+            position: relative;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
+            min-width: 840px;
             border-collapse: collapse;
         }
 
-        th, td {
-            text-align: left;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
         th {
-            background-color: #f1f5f9;
-            font-size: 0.85rem;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #f7fafc;
+            font-size: 0.72rem;
             text-transform: uppercase;
-            letter-spacing: 0.025em;
-            color: #475569;
+            color: var(--text-muted);
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            letter-spacing: 0.08em;
         }
 
-        /* Mobile Cards (Hidden by default) */
+        td {
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid #eef2f7;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .image-preview {
+            width: 84px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #d8e2ea;
+            background: #e2e8f0;
+        }
+
+        .image-preview:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 14px -10px rgba(15, 23, 42, 0.7);
+        }
+
+        .id-chip {
+            background: #e6f4f1;
+            color: #0f766e;
+            border: 1px solid #99f6e4;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .btn-segment-small {
+            padding: 5px 10px;
+            font-size: 0.78rem;
+            border-radius: 6px;
+            background: #edfdfa;
+            color: var(--primary-color);
+            border: 1px solid #99f6e4;
+            cursor: pointer;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .btn-segment-small:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
         .mobile-cards {
             display: none;
             grid-template-columns: 1fr;
-            gap: 1rem;
+            gap: 0.9rem;
         }
 
         .sherd-card {
             background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 0.85rem;
+            border: 1px solid #dbe5ee;
+            box-shadow: var(--shadow-sm);
             display: flex;
-            gap: 1rem;
+            gap: 0.8rem;
             align-items: center;
         }
 
         .card-img {
-            width: 100px;
-            height: 80px;
+            width: 96px;
+            height: 76px;
             object-fit: cover;
-            border-radius: 4px;
+            border-radius: 8px;
+            border: 1px solid #d8e2ea;
+            background: #e2e8f0;
         }
 
         .card-info {
@@ -127,50 +303,65 @@
         }
 
         .card-id {
-            font-weight: bold;
+            font-weight: 700;
             display: block;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.2rem;
             color: var(--primary-color);
+            font-family: 'Space Grotesk', sans-serif;
         }
 
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            
-            .search-toggle { display: block; }
-            .search-panel { 
-                display: none; 
-                grid-template-columns: 1fr;
-            }
-            .search-panel.active { display: grid; }
-
-            .data-table-container { display: none; }
-            .mobile-cards { display: grid; }
-            
-            .pagination {
-                flex-wrap: wrap;
-                gap: 0.25rem;
-            }
-            .pagination-btn {
-                padding: 0.4rem 0.6rem;
-                font-size: 0.8rem;
-            }
+        .empty-state {
+            display: none;
+            text-align: center;
+            padding: 2.25rem 1rem;
+            color: var(--text-muted);
         }
 
-        .image-preview {
-            width: 80px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-            background-color: #e2e8f0;
+        .empty-state strong {
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.43rem 0.72rem;
+            min-width: 42px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .image-preview:hover {
-            transform: scale(1.05);
+        .pagination-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
         }
 
-        /* Modal Styles */
+        .pagination-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 1.5rem;
+            display: none;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -184,17 +375,18 @@
             justify-content: center;
             align-items: center;
             overflow-y: auto;
+            padding: 1rem;
         }
 
         .modal-container {
             position: relative;
             background: #1e293b;
-            padding: 20px;
+            padding: 16px;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             max-width: 95vw;
             max-height: 95vh;
         }
@@ -245,33 +437,34 @@
 
         .modal-controls {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
             justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
         }
 
         .btn-primary {
             background-color: var(--primary-color);
             color: white;
-            border: none;
-            padding: 8px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
         }
 
         .btn-secondary {
             background-color: #475569;
             color: white;
-            border: none;
-            padding: 8px 24px;
-            border-radius: 6px;
-            cursor: pointer;
         }
 
-        .btn-primary:disabled {
-            background-color: #64748b;
-            opacity: 0.5;
+        .btn-primary:disabled,
+        .btn-secondary:disabled {
+            opacity: 0.55;
             cursor: not-allowed;
         }
 
@@ -285,192 +478,274 @@
             cursor: pointer;
         }
 
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 2rem;
-        }
-
-        .pagination-btn {
-            background: white;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 0.5rem 0.75rem;
-            min-width: 40px;
-        }
-
-        .pagination-btn.active {
-            background-color: var(--primary-color);
+        .zoom-label {
             color: white;
-            border-color: var(--primary-color);
-        }
-
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        #loading {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-weight: 700;
+            min-width: 56px;
             text-align: center;
-            padding: 2rem;
-            display: none;
         }
 
-        .stats {
-            font-size: 0.875rem;
-            color: #64748b;
-            margin-bottom: 1rem;
+        .modal-status {
+            min-height: 1.2rem;
+            color: #fca5a5;
+            font-size: 0.86rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .search-panel {
+                grid-template-columns: repeat(2, minmax(140px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .search-toggle {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .search-panel {
+                display: none;
+                grid-template-columns: 1fr;
+            }
+
+            .search-panel.active {
+                display: grid;
+            }
+
+            .search-actions {
+                width: 100%;
+            }
+
+            .btn-filter,
+            .btn-ghost {
+                flex: 1;
+            }
+
+            .data-table-container {
+                display: none;
+            }
+
+            .mobile-cards {
+                display: grid;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Sherd Data Explorer</h1>
+            <h1>Sherd Explorer</h1>
+            <div class="stats" id="stats">0 items</div>
         </header>
 
-        <button class="search-toggle" onclick="toggleSearch()">Toggle Filters</button>
+        <div class="status-row">
+            <button id="searchToggle" class="search-toggle" type="button" onclick="toggleSearch()">Show Filters</button>
+            <div id="loading">Loading sherd data...</div>
+        </div>
+
+        <div id="errorBanner" class="error-banner"></div>
+
         <section class="search-panel" id="searchPanel">
             <div class="form-group">
-                <label for="search">Global Search (ID)</label>
-                <input type="text" id="search" placeholder="e.g. JD0001">
+                <label for="search">Global Search</label>
+                <input type="text" id="search" placeholder="Search image or sherd ID">
             </div>
             <div class="form-group">
                 <label for="unit">Unit</label>
-                <select id="unit">
-                    <option value="">All</option>
+                <select id="unit" onchange="applyFilters()">
+                    <option value="">All Units</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="part">Part</label>
-                <select id="part">
-                    <option value="">All</option>
+                <select id="part" onchange="applyFilters()">
+                    <option value="">All Parts</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="type">Type</label>
-                <select id="type">
-                    <option value="">All</option>
+                <select id="type" onchange="applyFilters()">
+                    <option value="">All Types</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="side">Image Side</label>
-                <select id="side">
-                    <option value="">All</option>
+                <label for="side">Side</label>
+                <select id="side" onchange="applyFilters()">
+                    <option value="">All Sides</option>
                     <option value="exterior">Exterior</option>
                     <option value="interior">Interior</option>
                 </select>
             </div>
-            <div class="form-group">
-                <button onclick="applyFilters()">Filter</button>
+            <div class="search-actions">
+                <button class="btn-filter" type="button" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn-ghost" type="button" onclick="clearFilters()">Reset</button>
             </div>
         </section>
 
-        <div class="stats" id="stats">
-            Showing 0 of 0 sherds
-        </div>
-
         <div class="data-table-container">
-            <div id="loading">Loading data...</div>
-            <table id="data-table">
-                <thead>
-                    <tr>
-                        <th>Preview</th>
-                        <th>Image ID</th>
-                        <th>Sherd ID</th>
-                        <th>Unit</th>
-                        <th>Part</th>
-                        <th>Type</th>
-                        <th>Side</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <!-- Data rows will be injected here -->
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+                            <th>Preview</th>
+                            <th>Image ID</th>
+                            <th>Sherd ID</th>
+                            <th>Metadata</th>
+                            <th>Side</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="empty-state">
+                <strong>No sherds match the current filters.</strong>
+                Adjust filters or clear them to load more records.
+            </div>
         </div>
 
-        <div id="mobile-cards" class="mobile-cards">
-            <!-- Mobile cards will be injected here -->
-        </div>
+        <div id="mobile-cards" class="mobile-cards"></div>
 
-        <div class="pagination" id="pagination">
-            <!-- Pagination buttons will be injected here -->
-        </div>
+        <div class="pagination" id="pagination"></div>
     </div>
 
-    <!-- Image Enlarge Modal -->
     <div id="imageModal" class="modal">
         <div class="modal-container">
             <span class="close-modal" onclick="closeModal()">&times;</span>
             <div class="modal-controls">
-                <button class="btn-secondary" onclick="updateZoom(0.2)">Zoom +</button>
-                <button class="btn-secondary" onclick="updateZoom(-0.2)">Zoom -</button>
-                <button class="btn-secondary" onclick="resetZoom()">Reset Zoom</button>
-                <span id="zoomLabel" style="color: white; font-family: monospace;">100%</span>
+                <button class="btn-secondary" type="button" onclick="updateZoom(0.2)">Zoom +</button>
+                <button class="btn-secondary" type="button" onclick="updateZoom(-0.2)">Zoom -</button>
+                <button class="btn-secondary" type="button" onclick="resetZoom()">Reset Zoom</button>
+                <span id="zoomLabel" class="zoom-label">100%</span>
             </div>
             <div class="preview-scroll-container">
                 <div class="canvas-wrapper" id="canvasWrapper">
-                    <img class="modal-content" id="modalImage">
+                    <img class="modal-content" id="modalImage" alt="Sherd full preview">
                     <canvas id="bboxCanvas"></canvas>
-                    <img id="maskImage">
+                    <img id="maskImage" alt="Segmentation mask">
+                    <img id="embeddingViz" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;opacity:0.8;" alt="Embedding visualization">
                 </div>
             </div>
             <div class="modal-controls">
-                <button id="segmentBtn" class="btn-primary" onclick="runSegmentation()" disabled>Run Segmentation</button>
-                <button class="btn-secondary" onclick="resetCanvas()">Clear Box</button>
-                <button class="btn-secondary" onclick="closeModal()">Close</button>
+                <button id="segmentBtn" class="btn-primary" type="button" onclick="runSegmentation()" disabled>Run Segmentation</button>
+                <button id="vizBtn" class="btn-secondary" type="button" onclick="runEmbeddingViz()" disabled>Visualize Embeddings</button>
+                <button class="btn-secondary" type="button" onclick="resetCanvas()">Clear Box</button>
+                <button class="btn-secondary" type="button" onclick="closeModal()">Close</button>
             </div>
+            <div id="modalStatus" class="modal-status" role="status" aria-live="polite"></div>
         </div>
     </div>
 
     <script>
         let currentPage = 1;
         const pageSize = 20;
-        
-        // Segmentation UI state
+
         let currentImageId = null;
         let isDrawing = false;
-        let startX, startY;
+        let activePointerId = null;
+        let startX;
+        let startY;
         let currentBbox = null;
         let zoomLevel = 1.0;
+        let searchDebounce;
+        let isSegmenting = false;
+        let isVisualizing = false;
+
+        const canvas = document.getElementById('bboxCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.style.touchAction = 'none';
 
         function toggleSearch() {
             const panel = document.getElementById('searchPanel');
-            panel.classList.toggle('active');
+            const toggle = document.getElementById('searchToggle');
+            const isActive = panel.classList.toggle('active');
+            toggle.textContent = isActive ? 'Hide Filters' : 'Show Filters';
+        }
+
+        function showError(message) {
+            const banner = document.getElementById('errorBanner');
+            if (!message) {
+                banner.style.display = 'none';
+                banner.textContent = '';
+                return;
+            }
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function setLoading(isLoading) {
+            document.getElementById('loading').style.display = isLoading ? 'block' : 'none';
+        }
+
+        function showModalStatus(message) {
+            const el = document.getElementById('modalStatus');
+            el.textContent = message || '';
+        }
+
+        function syncModalActionButtons() {
+            const segmentBtn = document.getElementById('segmentBtn');
+            const vizBtn = document.getElementById('vizBtn');
+            const hasBbox = Array.isArray(currentBbox) && currentBbox.length === 4;
+            const disabled = !hasBbox || isSegmenting || isVisualizing;
+            segmentBtn.disabled = disabled;
+            vizBtn.disabled = disabled;
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
         }
 
         function openModal(src, imageId) {
             currentImageId = imageId;
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
-            const canvas = document.getElementById('bboxCanvas');
             const maskImg = document.getElementById('maskImage');
-            
-            modal.style.display = "flex";
+            const vizImg = document.getElementById('embeddingViz');
+
+            modal.style.display = 'flex';
             modalImg.src = src;
-            maskImg.style.display = "none";
-            document.getElementById('segmentBtn').disabled = true;
-            
+            maskImg.style.display = 'none';
+            vizImg.style.display = 'none';
+            showModalStatus('');
+            currentBbox = null;
+            isSegmenting = false;
+            isVisualizing = false;
+            syncModalActionButtons();
+
             modalImg.onload = () => {
-                // Determine a good initial scale for the "fit-in-window" look
                 const container = document.querySelector('.preview-scroll-container');
                 const scaleX = (container.clientWidth - 40) / modalImg.naturalWidth;
                 const scaleY = (container.clientHeight - 40) / modalImg.naturalHeight;
                 const initialScale = Math.min(scaleX, scaleY, 1.0);
-                
+
                 canvas.width = modalImg.naturalWidth;
                 canvas.height = modalImg.naturalHeight;
                 zoomLevel = initialScale;
                 applyZoom();
                 resetCanvas();
             };
+
+            modalImg.onerror = () => {
+                showModalStatus('Failed to load this image preview.');
+                resetCanvas();
+            };
         }
 
         function closeModal() {
-            document.getElementById('imageModal').style.display = "none";
+            resetCanvas();
+            currentImageId = null;
+            isDrawing = false;
+            activePointerId = null;
+            showModalStatus('');
+            document.getElementById('imageModal').style.display = 'none';
         }
 
         function updateZoom(delta) {
@@ -490,71 +765,87 @@
             zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
         }
 
-        // Canvas drawing logic
-        const canvas = document.getElementById('bboxCanvas');
-        const ctx = canvas.getContext('2d');
-
-        function getMousePos(e) {
+        function getPointerPos(event) {
             const rect = canvas.getBoundingClientRect();
-            // Since the canvas is scaled by CSS transform, 
-            // the rect size is the scaled size.
-            // Dividing by zoomLevel gives the coordinates on the original unscaled canvas.
             return {
-                x: (e.clientX - rect.left) / zoomLevel,
-                y: (e.clientY - rect.top) / zoomLevel
+                x: clamp((event.clientX - rect.left) / zoomLevel, 0, canvas.width),
+                y: clamp((event.clientY - rect.top) / zoomLevel, 0, canvas.height)
             };
         }
 
-        canvas.addEventListener('mousedown', e => {
+        function finishDrawing(event) {
+            if (!isDrawing || event.pointerId !== activePointerId) return;
+            isDrawing = false;
+            const pos = getPointerPos(event);
+
+            const x1 = Math.min(startX, pos.x);
+            const y1 = Math.min(startY, pos.y);
+            const x2 = Math.max(startX, pos.x);
+            const y2 = Math.max(startY, pos.y);
+
+            if (Math.abs(x2 - x1) < 3 || Math.abs(y2 - y1) < 3) {
+                resetCanvas();
+                return;
+            }
+
+            currentBbox = [x1, y1, x2, y2];
+            syncModalActionButtons();
+        }
+
+        canvas.addEventListener('pointerdown', (event) => {
             isDrawing = true;
-            const pos = getMousePos(e);
+            activePointerId = event.pointerId;
+            const pos = getPointerPos(event);
             startX = pos.x;
             startY = pos.y;
-            document.getElementById('maskImage').style.display = "none";
+            document.getElementById('maskImage').style.display = 'none';
+            document.getElementById('embeddingViz').style.display = 'none';
+            showModalStatus('');
+            if (canvas.setPointerCapture) {
+                canvas.setPointerCapture(event.pointerId);
+            }
         });
 
-        canvas.addEventListener('mousemove', e => {
-            if (!isDrawing) return;
-            const pos = getMousePos(e);
-            const currX = pos.x;
-            const currY = pos.y;
-            
+        canvas.addEventListener('pointermove', (event) => {
+            if (!isDrawing || event.pointerId !== activePointerId) return;
+            const pos = getPointerPos(event);
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#2563eb';
-            ctx.lineWidth = 2 / zoomLevel; // Keep line width consistent visually
-            ctx.strokeRect(startX, startY, currX - startX, currY - startY);
+            ctx.strokeStyle = '#14b8a6';
+            ctx.lineWidth = 2 / zoomLevel;
+            ctx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
         });
 
-        canvas.addEventListener('mouseup', e => {
-            if (!isDrawing) return;
+        canvas.addEventListener('pointerup', finishDrawing);
+        canvas.addEventListener('pointercancel', (event) => {
+            if (event.pointerId !== activePointerId) return;
             isDrawing = false;
-            const pos = getMousePos(e);
-            const endX = pos.x;
-            const endY = pos.y;
-            
-            // coordinates are already on the unscaled canvas (naturalWidth/Height)
-            const x1 = Math.min(startX, endX);
-            const y1 = Math.min(startY, endY);
-            const x2 = Math.max(startX, endX);
-            const y2 = Math.max(startY, endY);
-            
-            currentBbox = [x1, y1, x2, y2];
-            document.getElementById('segmentBtn').disabled = false;
+            activePointerId = null;
+        });
+        canvas.addEventListener('lostpointercapture', () => {
+            isDrawing = false;
+            activePointerId = null;
         });
 
         function resetCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            document.getElementById('maskImage').style.display = "none";
-            document.getElementById('segmentBtn').disabled = true;
+            document.getElementById('maskImage').style.display = 'none';
+            document.getElementById('embeddingViz').style.display = 'none';
+            isDrawing = false;
+            activePointerId = null;
             currentBbox = null;
+            syncModalActionButtons();
         }
 
         async function runSegmentation() {
             if (!currentBbox || !currentImageId) return;
-            
-            const btn = document.getElementById('segmentBtn');
-            btn.textContent = "Processing...";
-            btn.disabled = true;
+
+            const segmentBtn = document.getElementById('segmentBtn');
+            segmentBtn.textContent = 'Processing...';
+            isSegmenting = true;
+            syncModalActionButtons();
+            showError('');
+            showModalStatus('');
 
             try {
                 const response = await fetch('/api/segment', {
@@ -565,21 +856,61 @@
                         bbox: currentBbox
                     })
                 });
-                
+
                 const result = await response.json();
                 if (result.mask) {
                     const maskImg = document.getElementById('maskImage');
                     maskImg.src = result.mask;
-                    maskImg.style.display = "block";
-                } else if (result.error) {
-                    alert("Error: " + result.error);
+                    maskImg.style.display = 'block';
+                } else {
+                    showModalStatus(result.error || 'Segmentation failed.');
                 }
             } catch (error) {
-                console.error("Segmentation failed:", error);
-                alert("Segmentation failed");
+                console.error('Segmentation failed:', error);
+                showModalStatus('Segmentation failed due to a network or server error.');
             } finally {
-                btn.textContent = "Run Segmentation";
-                btn.disabled = false;
+                segmentBtn.textContent = 'Run Segmentation';
+                isSegmenting = false;
+                syncModalActionButtons();
+            }
+        }
+
+        async function runEmbeddingViz() {
+            if (!currentBbox || !currentImageId) return;
+
+            const segmentBtn = document.getElementById('segmentBtn');
+            const vizBtn = document.getElementById('vizBtn');
+            vizBtn.textContent = 'Analyzing...';
+            isVisualizing = true;
+            syncModalActionButtons();
+            showError('');
+            showModalStatus('');
+
+            try {
+                const response = await fetch('/api/visualize-embeddings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_id: currentImageId,
+                        bbox: currentBbox
+                    })
+                });
+
+                const result = await response.json();
+                if (result.viz) {
+                    const vizImg = document.getElementById('embeddingViz');
+                    vizImg.src = result.viz;
+                    vizImg.style.display = 'block';
+                } else {
+                    showModalStatus(result.error || 'Embedding visualization failed.');
+                }
+            } catch (error) {
+                console.error('Embedding visualization failed:', error);
+                showModalStatus('Embedding visualization failed due to a network or server error.');
+            } finally {
+                vizBtn.textContent = 'Visualize Embeddings';
+                isVisualizing = false;
+                syncModalActionButtons();
             }
         }
 
@@ -587,36 +918,67 @@
             try {
                 const response = await fetch('/api/metadata');
                 const data = await response.json();
-                
-                populateSelect('unit', data.unit);
-                populateSelect('part', data.part);
-                populateSelect('type', data.type);
+
+                populateSelect('unit', data.unit || []);
+                populateSelect('part', data.part || []);
+                populateSelect('type', data.type || []);
+                refreshSideOptions(data.image_side || []);
             } catch (error) {
                 console.error('Error fetching metadata:', error);
+                showError('Unable to load metadata filters.');
             }
         }
 
         function populateSelect(id, values) {
             const select = document.getElementById(id);
-            values.forEach(val => {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = val;
-                select.appendChild(opt);
+            values.forEach((val) => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                select.appendChild(option);
             });
+        }
+
+        function refreshSideOptions(values) {
+            const select = document.getElementById('side');
+            const fallback = ['exterior', 'interior'];
+            const available = values.length > 0 ? values : fallback;
+            const active = select.value;
+
+            select.innerHTML = '<option value="">All Sides</option>';
+            available.forEach((val) => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+                select.appendChild(option);
+            });
+            select.value = active;
+        }
+
+        function clearFilters() {
+            document.getElementById('search').value = '';
+            document.getElementById('unit').value = '';
+            document.getElementById('part').value = '';
+            document.getElementById('type').value = '';
+            document.getElementById('side').value = '';
+            applyFilters();
         }
 
         async function loadData(page = 1) {
             currentPage = page;
-            const search = document.getElementById('search').value;
+            showError('');
+
+            const search = document.getElementById('search').value.trim();
             const unit = document.getElementById('unit').value;
             const part = document.getElementById('part').value;
             const type = document.getElementById('type').value;
             const side = document.getElementById('side').value;
 
-            document.getElementById('loading').style.display = 'block';
+            setLoading(true);
             document.getElementById('table-body').innerHTML = '';
             document.getElementById('mobile-cards').innerHTML = '';
+            document.getElementById('pagination').innerHTML = '';
+            document.getElementById('emptyState').style.display = 'none';
 
             const params = new URLSearchParams({
                 page,
@@ -631,47 +993,60 @@
             try {
                 const response = await fetch(`/api/sherds?${params.toString()}`);
                 const result = await response.json();
-                
-                renderContent(result.data);
-                renderPagination(result.total_pages, result.page);
-                document.getElementById('stats').textContent = `Showing ${(result.page-1)*pageSize + 1} to ${Math.min(result.page*pageSize, result.total)} of ${result.total} items`;
+
+                renderContent(result.data || []);
+                renderPagination(result.total_pages || 0, result.page || 1);
+
+                if ((result.total || 0) === 0) {
+                    document.getElementById('stats').textContent = 'No matching items';
+                    document.getElementById('emptyState').style.display = 'block';
+                } else {
+                    const start = (result.page - 1) * pageSize + 1;
+                    const end = Math.min(result.page * pageSize, result.total);
+                    document.getElementById('stats').textContent = `Showing ${start} to ${end} of ${result.total} items`;
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
+                document.getElementById('stats').textContent = 'Unable to load items';
+                document.getElementById('emptyState').style.display = 'block';
+                showError('Failed to load sherd data. Please retry.');
             } finally {
-                document.getElementById('loading').style.display = 'none';
+                setLoading(false);
             }
         }
 
         function renderContent(data) {
             const tbody = document.getElementById('table-body');
             const mobileContainer = document.getElementById('mobile-cards');
-            
-            data.forEach(item => {
+
+            if (!data.length) return;
+
+            data.forEach((item) => {
                 const imgPath = `/images/${item.image_id}.jpg`;
-                
-                // Render Desktop Row
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><img class="image-preview" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd"></td>
-                    <td>${item.image_id}</td>
-                    <td>${item.sherd_id || '-'}</td>
-                    <td>${item.unit || '-'}</td>
-                    <td>${item.part || '-'}</td>
-                    <td>${item.type || '-'}</td>
-                    <td>${item.image_side || '-'}</td>
+                    <td><img class="image-preview" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/84x60?text=No+Img'" alt="sherd"></td>
+                    <td><span class="id-chip">${item.image_id}</span></td>
+                    <td>${item.sherd_id || '<span style="color:#94a3b8">-</span>'}</td>
+                    <td>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">${item.unit || 'Unknown unit'}</div>
+                        <div style="font-weight: 700;">${item.part || '-'} / ${item.type || '-'}</div>
+                    </td>
+                    <td><span style="text-transform: capitalize; font-weight: 600;">${item.image_side || '-'}</span></td>
+                    <td><button class="btn-segment-small" onclick="openModal('${imgPath}', '${item.image_id}')">Segment</button></td>
                 `;
                 tbody.appendChild(row);
 
-                // Render Mobile Card
                 const card = document.createElement('div');
                 card.className = 'sherd-card';
                 card.innerHTML = `
-                    <img class="card-img" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/80x60?text=No+Img'" alt="sherd">
+                    <img class="card-img" src="${imgPath}" onclick="openModal('${imgPath}', '${item.image_id}')" onerror="this.src='https://via.placeholder.com/96x76?text=No+Img'" alt="sherd">
                     <div class="card-info">
                         <span class="card-id">${item.image_id}</span>
-                        <div><strong>Part:</strong> ${item.part || '-'}</div>
-                        <div><strong>Type:</strong> ${item.type || '-'}</div>
-                        <div><strong>Side:</strong> ${item.image_side || '-'}</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted);">${item.unit || 'Unknown unit'}</div>
+                        <div style="font-size: 0.82rem; margin-top: 2px;">${item.part || '-'} / ${item.type || '-'}</div>
+                        <button class="btn-segment-small" style="width: 100%; margin-top: 8px;" onclick="openModal('${imgPath}', '${item.image_id}')">Segment</button>
                     </div>
                 `;
                 mobileContainer.appendChild(card);
@@ -684,57 +1059,78 @@
 
             if (totalPages <= 1) return;
 
-            // Simple pagination logic
             const startPage = Math.max(1, activePage - 2);
             const endPage = Math.min(totalPages, activePage + 2);
 
-            // Previous button
-            const prevBtn = createPageBtn('Prev', activePage - 1, activePage === 1);
-            container.appendChild(prevBtn);
+            container.appendChild(createPageBtn('Prev', activePage - 1, activePage === 1));
 
             if (startPage > 1) {
                 container.appendChild(createPageBtn('1', 1));
                 if (startPage > 2) {
                     const dots = document.createElement('span');
                     dots.textContent = '...';
+                    dots.style.color = 'var(--text-muted)';
                     container.appendChild(dots);
                 }
             }
 
-            for (let i = startPage; i <= endPage; i++) {
-                container.appendChild(createPageBtn(i, i, false, i === activePage));
+            for (let page = startPage; page <= endPage; page += 1) {
+                container.appendChild(createPageBtn(String(page), page, false, page === activePage));
             }
 
             if (endPage < totalPages) {
                 if (endPage < totalPages - 1) {
                     const dots = document.createElement('span');
                     dots.textContent = '...';
+                    dots.style.color = 'var(--text-muted)';
                     container.appendChild(dots);
                 }
-                container.appendChild(createPageBtn(totalPages, totalPages));
+                container.appendChild(createPageBtn(String(totalPages), totalPages));
             }
 
-            // Next button
-            const nextBtn = createPageBtn('Next', activePage + 1, activePage === totalPages);
-            container.appendChild(nextBtn);
+            container.appendChild(createPageBtn('Next', activePage + 1, activePage === totalPages));
         }
 
         function createPageBtn(text, page, disabled = false, active = false) {
-            const btn = document.createElement('button');
-            btn.textContent = text;
-            btn.className = `pagination-btn ${active ? 'active' : ''}`;
-            btn.disabled = disabled;
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = `pagination-btn ${active ? 'active' : ''}`;
+            button.disabled = disabled;
             if (!disabled) {
-                btn.onclick = () => loadData(page);
+                button.onclick = () => loadData(page);
             }
-            return btn;
+            return button;
         }
 
         function applyFilters() {
             loadData(1);
         }
 
-        // Initialize
+        document.getElementById('search').addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                clearTimeout(searchDebounce);
+                applyFilters();
+                return;
+            }
+
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                applyFilters();
+            }, 300);
+        });
+
+        document.getElementById('imageModal').addEventListener('click', (event) => {
+            if (event.target.id === 'imageModal') {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+
         fetchMetadata();
         loadData();
     </script>
