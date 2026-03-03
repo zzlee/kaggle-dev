@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 from PIL import Image
 import os
 
-def visualize_embeddings(image_path, bbox, model_path="mobile_sam.pt"):
+def render_feature_map(image_path, bbox, model_path="mobile_sam.pt"):
     model = SAM(model_path)
     img = cv2.imread(image_path)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     test_img = "h690/sherd_images/JD00001_exterior.jpg"
     if os.path.exists(test_img):
         # Sample bbox [x1, y1, x2, y2]
-        viz = visualize_embeddings(test_img, [200, 200, 800, 800])
+        viz = render_feature_map(test_img, [200, 200, 800, 800])
         viz.save("embedding_viz.png")
         print("Visualization saved to embedding_viz.png")

@@ -12,7 +12,6 @@ import base64
 from io import BytesIO
 from PIL import Image
 from ultralytics import SAM
-from sklearn.decomposition import PCA
 
 app = FastAPI()
 
@@ -80,62 +79,6 @@ async def segment_image(req: SegmentRequest):
     img_str = base64.b64encode(buffered.getvalue()).decode()
     
     return {"mask": f"data:image/png;base64,{img_str}"}
-
-@app.post("/api/visualize-embeddings")
-async def visualize_embeddings(req: SegmentRequest):
-    img_path = os.path.join("h690/sherd_images", f"{req.image_id}.jpg")
-    if not os.path.exists(img_path):
-        return {"error": "Image not found"}
-    
-    img = cv2.imread(img_path)
-    if img is None:
-        return {"error": "Failed to load image"}
-    
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    
-    # 1. Run SAM
-    sam_model.predictor.set_image(img_rgb)
-    results = sam_model(img_rgb, bboxes=[req.bbox], verbose=False)
-    
-    # 2. Extract features (usually 256 channels)
-    if sam_model.predictor.features is None:
-        return {"error": "Failed to extract features"}
-        
-    features = sam_model.predictor.features.squeeze().cpu().detach().numpy() # [256, 64, 64]
-    c, h, w = features.shape
-    
-    # 3. PCA to 3 components for RGB visualization
-    features_flat = features.reshape(c, -1).T # [4096, 256]
-    pca = PCA(n_components=3)
-    pca_features = pca.fit_transform(features_flat)
-    
-    # 4. Normalize to [0, 255]
-    pca_min = pca_features.min(axis=0)
-    pca_max = pca_features.max(axis=0)
-    pca_norm = (pca_features - pca_min) / (pca_max - pca_min + 1e-8)
-    pca_rgb = (pca_norm * 255).astype(np.uint8)
-    
-    # 5. Reshape and upscale
-    pca_img = pca_rgb.reshape(h, w, 3)
-    pca_img_resized = cv2.resize(pca_img, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
-    
-    # 6. Optional: Mask the visualization
-    if results and results[0].masks is not None:
-        mask = results[0].masks.data[0].cpu().numpy()
-        # Ensure mask shape matches rendered image dimensions.
-        if mask.shape != pca_img_resized.shape[:2]:
-            mask = cv2.resize(mask, (pca_img_resized.shape[1], pca_img_resized.shape[0]), interpolation=cv2.INTER_NEAREST)
-        # Dim areas outside confident mask region.
-        outside_mask = mask <= 0.5
-        pca_img_resized[outside_mask] = pca_img_resized[outside_mask] // 4
-
-    # Save to buffer
-    viz_img = Image.fromarray(pca_img_resized)
-    buffered = BytesIO()
-    viz_img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    
-    return {"viz": f"data:image/png;base64,{img_str}"}
 
 @app.get("/api/sherds")
 async def get_sherds(

@@ -394,22 +394,24 @@
         .preview-scroll-container {
             width: 100%;
             height: 70vh;
-            overflow: auto;
+            overflow-x: auto;
+            overflow-y: auto;
+            scrollbar-gutter: stable both-edges;
             background: #0f172a;
             border-radius: 8px;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             position: relative;
         }
 
         .canvas-wrapper {
             position: relative;
+            flex: 0 0 auto;
             line-height: 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             border-radius: 4px;
-            transform-origin: 0 0;
-            transition: transform 0.1s ease-out;
+            overflow: hidden;
         }
 
         .modal-content {
@@ -631,12 +633,10 @@
                     <img class="modal-content" id="modalImage" alt="Sherd full preview">
                     <canvas id="bboxCanvas"></canvas>
                     <img id="maskImage" alt="Segmentation mask">
-                    <img id="embeddingViz" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;opacity:0.8;" alt="Embedding visualization">
                 </div>
             </div>
             <div class="modal-controls">
                 <button id="segmentBtn" class="btn-primary" type="button" onclick="runSegmentation()" disabled>Run Segmentation</button>
-                <button id="vizBtn" class="btn-secondary" type="button" onclick="runEmbeddingViz()" disabled>Visualize Embeddings</button>
                 <button class="btn-secondary" type="button" onclick="resetCanvas()">Clear Box</button>
                 <button class="btn-secondary" type="button" onclick="closeModal()">Close</button>
             </div>
@@ -655,9 +655,9 @@
         let startY;
         let currentBbox = null;
         let zoomLevel = 1.0;
+        let fitZoomLevel = 1.0;
         let searchDebounce;
         let isSegmenting = false;
-        let isVisualizing = false;
 
         const canvas = document.getElementById('bboxCanvas');
         const ctx = canvas.getContext('2d');
@@ -692,11 +692,9 @@
 
         function syncModalActionButtons() {
             const segmentBtn = document.getElementById('segmentBtn');
-            const vizBtn = document.getElementById('vizBtn');
             const hasBbox = Array.isArray(currentBbox) && currentBbox.length === 4;
-            const disabled = !hasBbox || isSegmenting || isVisualizing;
+            const disabled = !hasBbox || isSegmenting;
             segmentBtn.disabled = disabled;
-            vizBtn.disabled = disabled;
         }
 
         function clamp(value, min, max) {
@@ -708,16 +706,13 @@
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
             const maskImg = document.getElementById('maskImage');
-            const vizImg = document.getElementById('embeddingViz');
 
             modal.style.display = 'flex';
             modalImg.src = src;
             maskImg.style.display = 'none';
-            vizImg.style.display = 'none';
             showModalStatus('');
             currentBbox = null;
             isSegmenting = false;
-            isVisualizing = false;
             syncModalActionButtons();
 
             modalImg.onload = () => {
@@ -728,7 +723,8 @@
 
                 canvas.width = modalImg.naturalWidth;
                 canvas.height = modalImg.naturalHeight;
-                zoomLevel = initialScale;
+                fitZoomLevel = initialScale;
+                zoomLevel = fitZoomLevel;
                 applyZoom();
                 resetCanvas();
             };
@@ -744,32 +740,54 @@
             currentImageId = null;
             isDrawing = false;
             activePointerId = null;
+            fitZoomLevel = 1.0;
             showModalStatus('');
             document.getElementById('imageModal').style.display = 'none';
         }
 
         function updateZoom(delta) {
             zoomLevel = Math.max(0.1, Math.min(5.0, zoomLevel + delta));
+            zoomLevel = Math.round(zoomLevel * 1000) / 1000;
             applyZoom();
         }
 
         function resetZoom() {
-            zoomLevel = 1.0;
+            zoomLevel = fitZoomLevel;
             applyZoom();
         }
 
         function applyZoom() {
             const wrapper = document.getElementById('canvasWrapper');
+            const modalImg = document.getElementById('modalImage');
+            const maskImg = document.getElementById('maskImage');
+            const container = document.querySelector('.preview-scroll-container');
             const zoomLabel = document.getElementById('zoomLabel');
-            wrapper.style.transform = `scale(${zoomLevel})`;
+            const displayWidth = Math.max(1, Math.round(canvas.width * zoomLevel));
+            const displayHeight = Math.max(1, Math.round(canvas.height * zoomLevel));
+
+            wrapper.style.width = `${displayWidth}px`;
+            wrapper.style.height = `${displayHeight}px`;
+            modalImg.style.width = `${displayWidth}px`;
+            modalImg.style.height = `${displayHeight}px`;
+            canvas.style.width = `${displayWidth}px`;
+            canvas.style.height = `${displayHeight}px`;
+            maskImg.style.width = `${displayWidth}px`;
+            maskImg.style.height = `${displayHeight}px`;
             zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+
+            requestAnimationFrame(() => {
+                container.scrollLeft = Math.max(0, (container.scrollWidth - container.clientWidth) / 2);
+                container.scrollTop = Math.max(0, (container.scrollHeight - container.clientHeight) / 2);
+            });
         }
 
         function getPointerPos(event) {
             const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
             return {
-                x: clamp((event.clientX - rect.left) / zoomLevel, 0, canvas.width),
-                y: clamp((event.clientY - rect.top) / zoomLevel, 0, canvas.height)
+                x: clamp((event.clientX - rect.left) * scaleX, 0, canvas.width),
+                y: clamp((event.clientY - rect.top) * scaleY, 0, canvas.height)
             };
         }
 
@@ -799,7 +817,6 @@
             startX = pos.x;
             startY = pos.y;
             document.getElementById('maskImage').style.display = 'none';
-            document.getElementById('embeddingViz').style.display = 'none';
             showModalStatus('');
             if (canvas.setPointerCapture) {
                 canvas.setPointerCapture(event.pointerId);
@@ -830,7 +847,6 @@
         function resetCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             document.getElementById('maskImage').style.display = 'none';
-            document.getElementById('embeddingViz').style.display = 'none';
             isDrawing = false;
             activePointerId = null;
             currentBbox = null;
@@ -871,45 +887,6 @@
             } finally {
                 segmentBtn.textContent = 'Run Segmentation';
                 isSegmenting = false;
-                syncModalActionButtons();
-            }
-        }
-
-        async function runEmbeddingViz() {
-            if (!currentBbox || !currentImageId) return;
-
-            const segmentBtn = document.getElementById('segmentBtn');
-            const vizBtn = document.getElementById('vizBtn');
-            vizBtn.textContent = 'Analyzing...';
-            isVisualizing = true;
-            syncModalActionButtons();
-            showError('');
-            showModalStatus('');
-
-            try {
-                const response = await fetch('/api/visualize-embeddings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image_id: currentImageId,
-                        bbox: currentBbox
-                    })
-                });
-
-                const result = await response.json();
-                if (result.viz) {
-                    const vizImg = document.getElementById('embeddingViz');
-                    vizImg.src = result.viz;
-                    vizImg.style.display = 'block';
-                } else {
-                    showModalStatus(result.error || 'Embedding visualization failed.');
-                }
-            } catch (error) {
-                console.error('Embedding visualization failed:', error);
-                showModalStatus('Embedding visualization failed due to a network or server error.');
-            } finally {
-                vizBtn.textContent = 'Visualize Embeddings';
-                isVisualizing = false;
                 syncModalActionButtons();
             }
         }
